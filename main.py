@@ -4,8 +4,9 @@ import pickle
 import os
 import sys
 from signal import SIGINT
-# import sys
-# import time
+import subprocess
+from time import sleep
+from datetime import datetime
 
 from bleak import BleakClient
 from bleak.uuids import uuid16_dict
@@ -97,9 +98,11 @@ def convert_to_unsigned_long(data, offset, length):
     # print(f'run: {ecg_session_time[-1]}')
 
 
-async def main(dir_name, max_wake):
+async def main(dir_name, wake_str):
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
+    max_wake = [int(x) for x in wake_str.split(":")]
+    time_convert = lambda x: x[0]*60+x[1] 
     loop = asyncio.get_running_loop()
     loop.add_signal_handler(SIGINT, handler)
     async with BleakClient(ADDRESS) as client:
@@ -119,8 +122,11 @@ async def main(dir_name, max_wake):
         print("Collecting ECG data...")
 
         i = 0
+        process_output = None
         # try:
         while record_flag:
+            # if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) &
+            #     break
             # Collecting ECG data
             await asyncio.sleep(60)
             i += 1
@@ -133,16 +139,36 @@ async def main(dir_name, max_wake):
                 pickle.dump(ecg_time_write, t_file)
             with open(dir_name+f'/d{i}.pkl', "wb") as d_file:
                 pickle.dump(ecg_data_write, d_file)
+            if i == 40:
+                data_process = subprocess.Popen(["python", "dynamic_analysis", dir_name, wake_str], \
+                                                stdout=subprocess.PIPE)
+            if i>40:
+                poll = data_process.poll()
+                if poll != None:
+                    process_output = data_process.stdout.read1().decode('utf-8').strip()
+                    if  process_output == 'wake':
+                        # record_flag = False
+                        break
         # Stop the stream once data is collected
         await client.stop_notify(PMD_DATA)
         print("Stopping ECG data...")
         print("[CLOSED] application closed.")
-
-        # sys.exit(0)
+    if process_output != 'wake':      
+        sleep_flag = True
+        while sleep_flag:           
+            now = datetime.now()
+            now_list = [now.hour, now.minute]
+            if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) &
+                sleep_flag = False
+                break
+            else:
+                sleep(60)
+    play_process = subprocess.run(["ffplay", "sample.mp3"])
+          
 
 
 if __name__ == "__main__":
     dir_name = sys.argv[1]
-    max_wake = sys.argv[2]
+    wake_str = sys.argv[2]
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
-    asyncio.run(main(dir_name, max_wake))
+    asyncio.run(main(dir_name, wake_str))

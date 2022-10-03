@@ -218,8 +218,9 @@ time_convert = lambda x: x[0]*60+x[1]
 while sleep_bool:
     now = datetime.now()
     now_list = [now.hour, now.minute]
-    if (now_list[0] <22) & (time_convert(now_list)>time_convert(max_wake)):
+    if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) & 
         print('wake')
+        sleep_bool = False
         break
     if os.path.isfile(folder_name + f'd{file_num}.pkl'):
         if not os.path.isfile(folder_name + f'd{file_num+1}.pkl'):
