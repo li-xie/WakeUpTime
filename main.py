@@ -129,9 +129,9 @@ async def main(dir_name, max_wake):
             ecg_session_time = []
             ecg_data_write = ecg_session_data
             ecg_session_data = []
-            with open(f't{i}.pkl', "wb") as t_file:
+            with open(dir_name+f'/t{i}.pkl', "wb") as t_file:
                 pickle.dump(ecg_time_write, t_file)
-            with open(f'd{i}.pkl', "wb") as d_file:
+            with open(dir_name+f'/d{i}.pkl', "wb") as d_file:
                 pickle.dump(ecg_data_write, d_file)
         # Stop the stream once data is collected
         await client.stop_notify(PMD_DATA)
