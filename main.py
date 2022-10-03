@@ -97,7 +97,9 @@ def convert_to_unsigned_long(data, offset, length):
     # print(f'run: {ecg_session_time[-1]}')
 
 
-async def main():
+async def main(dir_name, max_wake):
+    if not os.path.isdir(dir_name):
+        os.makedirs(dir_name)
     loop = asyncio.get_running_loop()
     loop.add_signal_handler(SIGINT, handler)
     async with BleakClient(ADDRESS) as client:
@@ -140,5 +142,7 @@ async def main():
 
 
 if __name__ == "__main__":
+    dir_name = sys.argv[1]
+    max_wake = sys.argv[2]
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
-    asyncio.run(main())
+    asyncio.run(main(dir_name, max_wake))
