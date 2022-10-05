@@ -353,7 +353,6 @@ while sleep_bool:
         # clf = pom.BayesClassifier(dists, prior)
         # stage_predict = clf.predict(feature_lists[-1])
         stage_predict = bayes_clf(feature_lists[-1], prior)
-        print(stage_predict)
         # feature_peak_index.append((peaks_start, peaks_end))
         sleep_stage.append(stage_val[stage_predict])
         peaks_start = peaks_end-peaks_overlap
