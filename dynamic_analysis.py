@@ -12,12 +12,13 @@ from scipy.signal import iirnotch, filtfilt, welch
 from scipy.interpolate import interp1d
 from scipy import ndimage 
 from analysis_funcs import find_best_peaks
-from scipy.integrate import trapz
 import os.path
 import subprocess
 import sys
 from datetime import datetime
 from time import sleep
+from helper_funcs import *
+import pomegranate as pom
 
 def extend_segs(flag):
     if flag:
@@ -67,36 +68,6 @@ def convert_curr_seg(rm_num):
         prev_peaks_score = peak_score_final[rm_num:].copy()
     return prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score
 
-def freq_analysis(rt):
-    rt = np.array(rt)
-    f = interp1d(rt[:-1], np.diff(rt), kind='cubic')
-    # sample rate for interpolation
-    fs = 4.0
-    steps = 1 / fs
-    newt = np.arange(rt[0], rt[-2], steps)
-    rt_intpl = f(newt)
-    ft, Pt = welch(rt_intpl, fs)
-    # plt.figure()
-    # plt.plot(ft, Pt, 'b.-')
-    # plt.plot(newt, rt_intpl, 'y.-')
-    cond_vlf = (ft>=0) & (ft<0.04)
-    cond_lf = (ft>=0.04) & (ft<0.15)
-    cond_hf = (ft>=0.15) & (ft<0.4)
-    
-    vlf = trapz(Pt[cond_vlf], ft[cond_vlf])
-    lf = trapz(Pt[cond_lf], ft[cond_lf])
-    hf = trapz(Pt[cond_hf], ft[cond_hf])
-    return vlf, lf, hf
-
-def time_analysis(rt):
-    rr = np.diff(rt)
-    mean_rr = np.mean(rr)
-    sdnn = np.std(rr)
-    pnn20 = np.where(np.absolute(np.diff(rr))>0.02)[0].size/(rr.size-1.)
-    pnn30 = np.where(np.absolute(np.diff(rr))>0.03)[0].size/(rr.size-1.)
-    pnn40 = np.where(np.absolute(np.diff(rr))>0.04)[0].size/(rr.size-1.)
-    # pnn50 = np.where(np.absolute(np.diff(rr))>0.05)[0].size/(rr.size-1.)
-    return mean_rr, sdnn, pnn20, pnn30, pnn40
 
 def clean_peaks_seg(nan_idx, peaks_pos_seg, peaks_time_seg):
     for i in nan_idx[::-1]:
@@ -107,60 +78,7 @@ def clean_peaks_seg(nan_idx, peaks_pos_seg, peaks_time_seg):
         peaks_pos_seg.pop(i)
         peaks_time_seg.pop(i)
 
-def time_from_list(t_list, t0=0):
-    if t_list[0]>9:
-        t_sec = -(60-t_list[2] + 60*(59-t_list[1]) + 3600*(11-t_list[0])) -t0
-    else:
-        t_sec = t_list[2] + 60*t_list[1] + 3600*t_list[0] -t0
-    return t_sec
-        
-def wake_times(filename : str):   
-    with open(filename) as f:
-        lines = f.readlines()
-    t0 = time_from_list([float(x) for x in lines[0].split()])
-    t1 = []
-    if len(lines) > 2:       
-        for line in lines[1:-1]:
-            t1.append(time_from_list([float(x) for x in line.split()], t0=t0))
-    tf = time_from_list([float(x) for x in lines[-1].split()], t0=t0)
-    return t1, tf
-    
-def find_valid_segs(t_logic, min_len):
-    idx_starts = []
-    idx_ends = []
-    t_logic_list = t_logic.tolist()
-    try:
-        idx_start = t_logic_list.index(True)
-    except ValueError:
-        return idx_starts, idx_ends
-    idx_end = np.inf
-    end_temp = idx_start+1
-    while end_temp < t_logic.size:       
-        right_cap = min([end_temp+min_len, t_logic.size])
-        if np.all(t_logic[end_temp: right_cap]):
-            end_temp += min_len
-        else:
-            junction_list = t_logic_list[end_temp:right_cap]
-            idx_end = junction_list.index(False)+end_temp
-            if idx_end - idx_start > min_len:
-                idx_starts.append(idx_start)
-                idx_ends.append(idx_end)
-            last_true = junction_list[::-1].index(False)
-            if last_true > 0:               
-                idx_start = right_cap-last_true 
-                idx_end = np.inf
-                end_temp = idx_start+1
-            else:
-                try:
-                    idx_start = t_logic_list[right_cap:].index(True)+right_cap
-                    idx_end = np.inf
-                    end_temp = idx_start+1
-                except ValueError:
-                    return idx_starts, idx_ends                
-    if (idx_end - idx_start > min_len) and (idx_start<t_logic.size):
-        idx_starts.append(idx_start)
-        idx_ends.append(idx_end)
-        return idx_starts, idx_ends
+
                 
     
 folder_name = sys.argv[1]+'/'
@@ -177,6 +95,9 @@ best_peak_para = [win_size, adj_per, sample_rate, dist_low, dist_hi, peak_cut, r
 def_len = int(sample_rate*20)
 pcs = 1e-6
 b, a = iirnotch(w0=0.05, Q = 0.005, fs = sample_rate)
+with open('model.pkl', 'rb') as fp:
+    dists, prior_params = pickle.load(fp)
+
 
 sleep_bool = True
 file_num = 2
@@ -209,11 +130,13 @@ peaks_start = 0
 peaks_end = b_len
 peaks_overlap = 100
 feature_lists = []
-feature_time =[]
-feature_peak_index = []
+feature_time = []
+sleep_stage = []
+# feature_peak_index = []
 rr_count = 0;
 rr_cum = 0;
 time_convert = lambda x: x[0]*60+x[1] 
+w = 10
 # v_all = []
 while sleep_bool:
     now = datetime.now()
@@ -246,6 +169,13 @@ while sleep_bool:
     if file_num == 2:
         t0 = t_array[t_idx[idx_starts[0]]]
         valid_end = 0
+        sleep_start = datetime.fromtimestamp(os.path.getmtime(folder_name+f'd{file_num}.pkl'))
+        if sleep_start.hour > 22:
+            sleep_time = [sleep_start.hour-23, sleep_start.minute-60]
+        else:
+            sleep_time = [sleep_start.hour, sleep_start.minute]
+        prior_t = (time_convert(max_wake) - time_convert(sleep_time))/60
+        prior_f = prior_func(prior_t, prior_params)
     # v_all.extend(v_temp)
     v_filtered = filtfilt(b, a, curr_v)
     v_filtered = ndimage.gaussian_filter(v_filtered, 2)
@@ -413,18 +343,22 @@ while sleep_bool:
         else:
             vlf, lf, hf = freq_analysis(peaks_time_seg)
             mean_rr, sdnn, pnn20, pnn30, pnn40 = time_analysis(peaks_time_seg)
-            feature_lists.append([vlf, lf, hf, lf/hf, mean_rr, sdnn, pnn20, pnn30, pnn40])
-            rr_cum = rr_cum + (len(peaks_time_seg)-1)*mean_rr
-            rr_count = rr_count+len(peaks_time_seg)-1
+            feature_lists.append([lf, hf, lf/hf, mean_rr, sdnn, pnn20])
+            # rr_cum = rr_cum + (len(peaks_time_seg)-1)*mean_rr
+            # rr_count = rr_count+len(peaks_time_seg)-1
         feature_time.append(peaks_time_seg[-1])
-        feature_peak_index.append((peaks_start, peaks_end))
-        # plt.figure()
-        # plt.plot(peaks_pos_seg, peaks_time, 'bo-')
-        # plt.plot(np.where(t_seg>0)[0]+idx_start, t_seg[t_seg>0]-t0, 'y.-')
+        prior = np.array(prior_f(feature_time[-1]))
+        clf = pom.BayesClassifier(dists, prior)
+        stage_predict = clf.predict(feature_arrays[i][j,:])
+        # feature_peak_index.append((peaks_start, peaks_end))
+        sleep_stage.append(stage_val[stage_predict])
         peaks_start = peaks_end-peaks_overlap
         peaks_end = peaks_start+b_len
+    stage_binary = [1. if x>2.5 else 0. for x in sleep_stage]
+    if on_switch(stage_binary, feature_time, w):
+        print('wake')
+        sleep_bool = False
+        break
     
-    # feature_array = np.array(feature_lists)
-    # feature_array[:,4] = feature_array[:,4]*rr_count/rr_cum
 
 
