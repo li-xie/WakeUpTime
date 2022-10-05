@@ -4,6 +4,7 @@ import pomegranate as pom
 from scipy.integrate import trapz
 from scipy.signal import welch 
 from scipy.interpolate import interp1d
+from scipy.stats import multivariate_normal
 
 def time_from_list(t_list, t0=0):
     if t_list[0]>9:
@@ -117,12 +118,22 @@ def prior_func(end_time, prior_params):
             D_hill = hill_func(t, cutoff_time/2., prior_params['D_n'])*prior_params['D_max']    
         else: 
             D_hill = 0
+        # BW
+        BW_hill = hill_func(t, prior_params['BW_t0']*c, prior_params['BW_n'])*prior_params['BW_max']
         #D, BW, S, R 
-        prob_un = np.array([D_hill, prior_params['BW_const'], prior_params['SR_const'], prior_params['SR_const']])
+        # prob_un = np.array([D_hill, prior_params['BW_const'], prior_params['SR_const'], prior_params['SR_const']])
+        prob_un = np.array([D_hill, BW_hill, prior_params['SR_const'], prior_params['SR_const']])
         prob_nor = prob_un/np.sum(prob_un)*p_tot
         probs.extend(prob_nor.tolist())
         return probs
     return prior_probs
+
+def bayes_wrap(dist_list):
+    def bayes_classifier(feature, p_prior):
+        p_likelihood = [multivariate_normal.pdf(feature, mean=dist[0], cov=dist[1]) for dist in dist_list]
+        p_post = np.array(p_likelihood)*np.array(p_prior)/np.sum(np.array(p_likelihood)*np.array(p_prior))
+        return p_post
+    return bayes_classifier
 
 def on_switch(stage_binary, t_list, w):
     stage_ave = np.convolve(stage_binary, np.ones(w), 'valid')/float(w)

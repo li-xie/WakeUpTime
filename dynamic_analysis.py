@@ -18,7 +18,7 @@ import sys
 from datetime import datetime
 from time import sleep
 from helper_funcs import *
-import pomegranate as pom
+# import pomegranate as pom
 
 def extend_segs(flag):
     if flag:
@@ -95,9 +95,9 @@ best_peak_para = [win_size, adj_per, sample_rate, dist_low, dist_hi, peak_cut, r
 def_len = int(sample_rate*20)
 pcs = 1e-6
 b, a = iirnotch(w0=0.05, Q = 0.005, fs = sample_rate)
-with open('model.pkl', 'rb') as fp:
-    dists, prior_params = pickle.load(fp)
-
+with open('model8_dict.pkl', 'rb') as fp:
+    dist_list, prior_params = pickle.load(fp)
+bayes_clf = bayes_wrap(dist_list)
 
 sleep_bool = True
 file_num = 2
@@ -136,7 +136,9 @@ sleep_stage = []
 rr_count = 0;
 rr_cum = 0;
 time_convert = lambda x: x[0]*60+x[1] 
+stage_val = [3, 4, 0, 3, 1, 2]
 w = 10
+
 # v_all = []
 while sleep_bool:
     now = datetime.now()
@@ -347,9 +349,10 @@ while sleep_bool:
             # rr_cum = rr_cum + (len(peaks_time_seg)-1)*mean_rr
             # rr_count = rr_count+len(peaks_time_seg)-1
         feature_time.append(peaks_time_seg[-1])
-        prior = np.array(prior_f(feature_time[-1]))
-        clf = pom.BayesClassifier(dists, prior)
-        stage_predict = clf.predict(feature_arrays[i][j,:])
+        prior = prior_f(feature_time[-1])
+        # clf = pom.BayesClassifier(dists, prior)
+        # stage_predict = clf.predict(feature_lists[-1])
+        stage_predict = bayes_clf(feature_lists[-1], prior)
         # feature_peak_index.append((peaks_start, peaks_end))
         sleep_stage.append(stage_val[stage_predict])
         peaks_start = peaks_end-peaks_overlap
