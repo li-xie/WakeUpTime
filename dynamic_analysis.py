@@ -358,7 +358,8 @@ while sleep_bool:
         peaks_start = peaks_end-peaks_overlap
         peaks_end = peaks_start+b_len
     stage_binary = [1. if x>2.5 else 0. for x in sleep_stage]
-    if on_switch(stage_binary, feature_time, w):
-        print('wake')
-        sleep_bool = False
-        break
+    if feature_time[-1] > 21600:
+        if on_switch(stage_binary, feature_time, w):
+            print('wake')
+            sleep_bool = False
+            break
