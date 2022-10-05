@@ -177,7 +177,7 @@ while sleep_bool:
         else:
             sleep_time = [sleep_start.hour, sleep_start.minute]
         prior_t = (time_convert(max_wake) - time_convert(sleep_time))/60
-        prior_f = prior_func(prior_t, prior_params)
+        prior_f = prior_func(8, prior_params)
     # v_all.extend(v_temp)
     v_filtered = filtfilt(b, a, curr_v)
     v_filtered = ndimage.gaussian_filter(v_filtered, 2)

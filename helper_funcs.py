@@ -138,7 +138,7 @@ def on_switch(stage_binary, t_list, w):
     stage_ave = np.convolve(stage_binary, np.ones(w), 'valid')/float(w)
     t_array = np.array(t_list[w-1:])
     stage_bg = np.mean(stage_ave[(t_array>7200) & (t_array<21600)])
-    stage_norm = (stage_ave-stage_bg)/stage_bg
+    stage_norm = (stage_ave-stage_bg)/max(stage_bg, 0.001)
     stage_later = stage_norm[t_array>21600]
     if np.any(stage_later>2):
         return True
