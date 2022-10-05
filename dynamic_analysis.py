@@ -8,9 +8,9 @@ Created on Fri Sep  9 10:59:33 2022
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
-from scipy.signal import iirnotch, filtfilt, welch 
+from scipy.signal import iirnotch, filtfilt, welch
 from scipy.interpolate import interp1d
-from scipy import ndimage 
+from scipy import ndimage
 from analysis_funcs import find_best_peaks
 import os.path
 import subprocess
@@ -28,7 +28,7 @@ def extend_segs(flag):
         segs_rrsd.append(np.std(np.diff(peak_list_final)))
         segs_height.append(peak_height_final.tolist())
         segs_score.append(peak_score_final.tolist())
-    else: # if flag==False, the segment terminates at shift_len  
+    else: # if flag==False, the segment terminates at shift_len
         segs_start.append(seg_start+v_loc)
         segs_end.append(seg_start+shift_len+v_loc)
         segs_peak.append([])
@@ -54,14 +54,14 @@ def extend_all_peaks(rm_num):
         all_peaks_height.extend(prev_peaks_height[:-rm_num].tolist())
         all_peaks_score.extend(prev_peaks_score[:-rm_num].tolist())
 
-# update the prev seg with the curr seg after removing rm_num peaks from its left end      
+# update the prev seg with the curr seg after removing rm_num peaks from its left end
 def convert_curr_seg(rm_num):
     if rm_num == -1:
         prev_peaks_pos = np.array([], dtype=int)
         prev_peaks_time = np.array([])
         prev_peaks_height = np.array([])
         prev_peaks_score = np.array([], dtype=int)
-    else:        
+    else:
         prev_peaks_pos = peak_list_final[rm_num:].copy()
         prev_peaks_time = peak_time_final[rm_num:].copy()
         prev_peaks_height = peak_height_final[rm_num:].copy()
@@ -79,8 +79,8 @@ def clean_peaks_seg(nan_idx, peaks_pos_seg, peaks_time_seg):
         peaks_time_seg.pop(i)
 
 
-                
-    
+
+
 folder_name = sys.argv[1]+'/'
 max_wake = [int(x) for x in sys.argv[2].split(":")]
 sample_rate = 130.
@@ -89,8 +89,8 @@ adj_per = 95.
 dist_low = sample_rate/2
 dist_hi = sample_rate
 peak_cut = 0.25
-rrsd_thre = 15 
-shift_len = int(sample_rate*5) 
+rrsd_thre = 15
+shift_len = int(sample_rate*5)
 best_peak_para = [win_size, adj_per, sample_rate, dist_low, dist_hi, peak_cut, rrsd_thre, shift_len]
 def_len = int(sample_rate*20)
 pcs = 1e-6
@@ -106,7 +106,7 @@ segs_end = [] # list containing the (not included) end of each segment
 # list containing the # of overlapping peaks at the two joints on both ends.
 # a clean segment should have 2 overlapping peaks on both ends: [2, 2]
 # a discarded segment due to unidentifiable peaks would have [-1, -1].
-segs_jnt = [] 
+segs_jnt = []
 segs_peak = [] # list containing the peak positions of each segment
 segs_score = [] # list containing the peak scores of each segment
 segs_height = [] # list containing the peak heights of each segment
@@ -135,7 +135,7 @@ sleep_stage = []
 # feature_peak_index = []
 rr_count = 0;
 rr_cum = 0;
-time_convert = lambda x: x[0]*60+x[1] 
+time_convert = lambda x: x[0]*60+x[1]
 stage_val = [3, 4, 0, 3, 1, 2]
 w = 10
 
@@ -143,7 +143,7 @@ w = 10
 while sleep_bool:
     now = datetime.now()
     now_list = [now.hour, now.minute]
-    if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) & 
+    if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) &
         print('wake')
         sleep_bool = False
         break
@@ -159,7 +159,7 @@ while sleep_bool:
     with open(folder_name+f'd{file_num}.pkl', 'rb') as d_file:
         v_temp = pickle.load(d_file)
     with open(folder_name+f't{file_num}.pkl', 'rb') as t_file:
-        t_temp = pickle.load(t_file) 
+        t_temp = pickle.load(t_file)
     curr_v.extend(v_temp)
     curr_t.extend(t_temp)
     t_array = np.asarray(curr_t)*1e-9
@@ -210,16 +210,16 @@ while sleep_bool:
             if seg_start < valid_end - 2*def_len:
                 seg_end = seg_start + def_len
             else:
-                seg_end = valid_end               
-            
+                seg_end = valid_end
+
             while seg_end <= min([valid_end, v_filtered.size]):
                 hrdata = v_filtered[seg_start:seg_end]
                 peak_list_final, peak_height_final, peak_score_final, next_seg_start = \
                     find_best_peaks(hrdata, best_peak_para)
                 if next_seg_start == -1: # curr seg invalid: only a few peaks are identified in the stretch
                     extend_segs(False) # record that this segment is invalid
-                    seg_start = seg_start+shift_len # start the next segment after shift_len      
-                    segs_jnt.append([-1, -1])         
+                    seg_start = seg_start+shift_len # start the next segment after shift_len
+                    segs_jnt.append([-1, -1])
                     if prev_peaks_pos.size > 0: # if the previous segment exists
                         extend_all_peaks(0) # concatenate without modifying the right joint
                         # the previous segment is updated
@@ -229,11 +229,11 @@ while sleep_bool:
                         curr_seg_start = np.nan # new current segment has no right joint
                 else: # curr seg is valid
                     peak_time_final = np.array(time_interp(peak_list_final + seg_start))
-                    peak_list_final = peak_list_final + seg_start + v_loc                    
+                    peak_list_final = peak_list_final + seg_start + v_loc
                     segs_jnt.append([0, 0])
                     extend_segs(True)
                     if prev_peaks_pos.size > 0:
-                        # curr_seg_start: the # of overlapping peaks at the end of prev_peaks_pos 
+                        # curr_seg_start: the # of overlapping peaks at the end of prev_peaks_pos
                         # and beginning of current segment peak_list_final
                         if not np.isnan(curr_seg_start):
                             prev_peaks = prev_peaks_pos[-curr_seg_start:]
@@ -245,13 +245,13 @@ while sleep_bool:
                             if prev_peaks_incon.size==0 and curr_peaks_incon.size==0:
                                 extend_all_peaks(0)
                                 prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
-                                    convert_curr_seg(curr_seg_start)                    
+                                    convert_curr_seg(curr_seg_start)
                             elif prev_peaks_incon.size>1 or curr_peaks_incon.size>1:
                                 print ("more than 1 inconsistency over the joint #"+str(len(segs_start)-1))
                                 segs_jnt[-2][1] = curr_seg_start
                                 segs_jnt[-1][0] = curr_seg_start
                                 # concatenate the prev seg curr_seg_start without the last curr_seg_start peaks
-                                extend_all_peaks(curr_seg_start) 
+                                extend_all_peaks(curr_seg_start)
                                 extend_all_peaks(-1) # patch with a nan to indicate discontinuity
                                 prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
                                     convert_curr_seg(curr_seg_start)
@@ -262,7 +262,7 @@ while sleep_bool:
                                     segs_jnt[-2][1] = 1
                                     extend_all_peaks(1)
                                     prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
-                                        convert_curr_seg(curr_seg_start-1)  
+                                        convert_curr_seg(curr_seg_start-1)
                                 else: # construct two alternative trains, and identify the false peak based on rrsd
                                     joined_seg1 = prev_peaks_pos[:-1].tolist() + \
                                         peak_list_final[curr_seg_start-1:].tolist()
@@ -274,14 +274,14 @@ while sleep_bool:
                                         segs_jnt[-2][1] = 1
                                         extend_all_peaks(1)
                                         prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
-                                            convert_curr_seg(curr_seg_start-1)  
+                                            convert_curr_seg(curr_seg_start-1)
                                     else:
                                         print ("the old segment is better at joint #"+str(len(segs_start)-1))
                                         segs_jnt[-1][0] = 1
                                         extend_all_peaks(0)
                                         prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
                                             convert_curr_seg(curr_seg_start)
-                            else: 
+                            else:
                                 print ("the inconsistent peak is not the last one at joint #"+str(len(segs_start)-1))
                                 segs_jnt[-2][1] = curr_seg_start
                                 segs_jnt[-1][0] = curr_seg_start
@@ -289,7 +289,7 @@ while sleep_bool:
                                 extend_all_peaks(-1)
                                 prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
                                     convert_curr_seg(curr_seg_start)
-                        else: # np.isnan(curr_seg_start) is true   
+                        else: # np.isnan(curr_seg_start) is true
                             extend_all_peaks(0)
                             extend_all_peaks(-1)
                             prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
@@ -305,7 +305,7 @@ while sleep_bool:
                         raise ValueError("curr_seg_start is -1")
                     else:
                         seg_start = prev_peaks_pos[-curr_seg_start] - v_loc - 50
-                if seg_end < valid_end:            
+                if seg_end < valid_end:
                     if seg_start < valid_end - 2*def_len:
                         seg_end = seg_start + def_len
                     else:
@@ -323,11 +323,11 @@ while sleep_bool:
             curr_v = []
             curr_t = []
             if prev_peaks_pos.size > 0: # if the previous segment exists
-                raise ValueError("prev_peaks_pos should have size 0")            
+                raise ValueError("prev_peaks_pos should have size 0")
         else:
             curr_v = curr_v[seg_start:]
             curr_t = curr_t[seg_start:]
-            v_loc = v_loc + seg_start                                   
+            v_loc = v_loc + seg_start
     file_num += 1
     while peaks_end < len(all_peaks_time):
         if np.isnan(all_peaks_pos[peaks_start]):
@@ -353,6 +353,7 @@ while sleep_bool:
         # clf = pom.BayesClassifier(dists, prior)
         # stage_predict = clf.predict(feature_lists[-1])
         stage_predict = bayes_clf(feature_lists[-1], prior)
+        print(stage_predict)
         # feature_peak_index.append((peaks_start, peaks_end))
         sleep_stage.append(stage_val[stage_predict])
         peaks_start = peaks_end-peaks_overlap
@@ -362,6 +363,3 @@ while sleep_bool:
         print('wake')
         sleep_bool = False
         break
-    
-
-
