@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import pomegranate as pom
 from scipy.integrate import trapz
 from scipy.signal import welch 
 from scipy.interpolate import interp1d
