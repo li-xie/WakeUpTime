@@ -8,7 +8,7 @@ Created on Wed Oct  5 10:17:34 2022
 import subprocess
 dir_name = '20220911'
 wake_str = '8:30'
-data_process = subprocess.Popen(["python", "dynamic_analysis", dir_name, wake_str], \
+data_process = subprocess.Popen(["python", "dynamic_analysis.py", dir_name, wake_str], \
                                 stdout=subprocess.PIPE)
 poll = data_process.poll()
 if poll != None:
