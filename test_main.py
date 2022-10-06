@@ -8,7 +8,7 @@ Created on Wed Oct  5 10:17:34 2022
 import subprocess
 from time import sleep
 dir_name = 'test'
-wake_str = '17:30'
+wake_str = '20:40'
 data_process = subprocess.Popen(["python", "dynamic_analysis_debug.py", dir_name, wake_str], \
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 # data_process = subprocess.run(["python", "dynamic_analysis_debug.py", dir_name, wake_str])

@@ -123,6 +123,7 @@ async def main(dir_name, wake_str):
 
         i = 0
         process_output = None
+        global record_flag
         # try:
         while record_flag:
             # if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) &
@@ -139,14 +140,16 @@ async def main(dir_name, wake_str):
                 pickle.dump(ecg_time_write, t_file)
             with open(dir_name+f'/d{i}.pkl', "wb") as d_file:
                 pickle.dump(ecg_data_write, d_file)
-            if i == 40:
-                data_process = subprocess.Popen(["python", "dynamic_analysis.py", dir_name, wake_str], \
+            if i == 2:
+                data_process = subprocess.Popen(["python", "dynamic_analysis_debug.py", dir_name, wake_str], \
                                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if i>40:
+            if i>2:
                 poll = data_process.poll()
                 if poll != None:
                     process_output = data_process.stdout.read1().decode('utf-8').strip()
                     process_error = data_process.stderr.read1().decode('utf-8').strip()
+                    print('process output is: '+process_output)
+                    print('process error:' + process_error)
                     record_flag = False
                     break
         # Stop the stream once data is collected
@@ -163,12 +166,12 @@ async def main(dir_name, wake_str):
                 break
             else:
                 sleep(60)
-    play_process = subprocess.run(["ffplay", "-autoexit", "sample.mp3"])
+    play_process = subprocess.run(["ffplay", "-loglevel", "quiet", "-autoexit", "sample.mp3"])  
 
 
 
 if __name__ == "__main__":
     dir_name = sys.argv[1]
     wake_str = sys.argv[2]
-    os.environ["PYTHONASYNCIODEBUG"] = str(1)
+    # os.environ["PYTHONASYNCIODEBUG"] = str(1)
     asyncio.run(main(dir_name, wake_str))

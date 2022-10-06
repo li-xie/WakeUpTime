@@ -247,7 +247,7 @@ while sleep_bool:
                                 prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
                                     convert_curr_seg(curr_seg_start)
                             elif prev_peaks_incon.size>1 or curr_peaks_incon.size>1:
-                                print ("more than 1 inconsistency over the joint #"+str(len(segs_start)-1))
+                                # print ("more than 1 inconsistency over the joint #"+str(len(segs_start)-1))
                                 segs_jnt[-2][1] = curr_seg_start
                                 segs_jnt[-1][0] = curr_seg_start
                                 # concatenate the prev seg curr_seg_start without the last curr_seg_start peaks
@@ -276,13 +276,13 @@ while sleep_bool:
                                         prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
                                             convert_curr_seg(curr_seg_start-1)
                                     else:
-                                        print ("the old segment is better at joint #"+str(len(segs_start)-1))
+                                        # print ("the old segment is better at joint #"+str(len(segs_start)-1))
                                         segs_jnt[-1][0] = 1
                                         extend_all_peaks(0)
                                         prev_peaks_pos, prev_peaks_time, prev_peaks_height, prev_peaks_score = \
                                             convert_curr_seg(curr_seg_start)
                             else:
-                                print ("the inconsistent peak is not the last one at joint #"+str(len(segs_start)-1))
+                                # print ("the inconsistent peak is not the last one at joint #"+str(len(segs_start)-1))
                                 segs_jnt[-2][1] = curr_seg_start
                                 segs_jnt[-1][0] = curr_seg_start
                                 extend_all_peaks(curr_seg_start)
@@ -340,7 +340,7 @@ while sleep_bool:
         if nan_idx.size > 0:
             clean_peaks_seg(nan_idx, peaks_pos_seg, peaks_time_seg)
         if np.where(np.diff(peaks_time_seg)>3)[0].size>0:
-            print(f'RR interval larger than 3s {peaks_start}, {peaks_end}')
+            # print(f'RR interval larger than 3s {peaks_start}, {peaks_end}')
             feature_lists.append(feature_lists[-1])
         else:
             vlf, lf, hf = freq_analysis(peaks_time_seg)
@@ -358,8 +358,12 @@ while sleep_bool:
         peaks_start = peaks_end-peaks_overlap
         peaks_end = peaks_start+b_len
     stage_binary = [1. if x>2.5 else 0. for x in sleep_stage]
-    if feature_time[-1] > 21600:
-        if on_switch(stage_binary, feature_time, w):
-            print('wake')
+    if len(feature_time)>0:
+        if feature_time[-1] > 210:
+            print(f'wake:{int(feature_time[-1])}')
             sleep_bool = False
             break
+        # if on_switch(stage_binary, feature_time, w):
+        #     print('wake')
+        #     sleep_bool = False
+        #     break
