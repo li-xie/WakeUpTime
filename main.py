@@ -102,7 +102,7 @@ async def main(dir_name, wake_str):
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
     max_wake = [int(x) for x in wake_str.split(":")]
-    time_convert = lambda x: x[0]*60+x[1] 
+    time_convert = lambda x: x[0]*60+x[1]
     loop = asyncio.get_running_loop()
     loop.add_signal_handler(SIGINT, handler)
     async with BleakClient(ADDRESS) as client:
@@ -146,16 +146,16 @@ async def main(dir_name, wake_str):
                 poll = data_process.poll()
                 if poll != None:
                     process_output = data_process.stdout.read1().decode('utf-8').strip()
-                    if  process_output == 'wake':
-                        # record_flag = False
-                        break
+                    process_error = data_process.stderr.read1().decode('utf-8').strip()
+                    record_flag = False
+                    break
         # Stop the stream once data is collected
         await client.stop_notify(PMD_DATA)
         print("Stopping ECG data...")
         print("[CLOSED] application closed.")
-    if process_output != 'wake':      
+    if process_output != 'wake':
         sleep_flag = True
-        while sleep_flag:           
+        while sleep_flag:
             now = datetime.now()
             now_list = [now.hour, now.minute]
             if (time_convert(now_list)>time_convert(max_wake)): #(now_list[0] <22) &
@@ -164,7 +164,7 @@ async def main(dir_name, wake_str):
             else:
                 sleep(60)
     play_process = subprocess.run(["ffplay", "sample.mp3"])
-          
+
 
 
 if __name__ == "__main__":
